@@ -112,6 +112,7 @@ const cardIndex = ref(0)
 const showAnswer = ref(false)
 const showHiragana = ref(true)
 const showFilters = ref(false)
+const randomMode = ref(false)
 
 const normalizeText = (value: string) => value
   .normalize('NFD')
@@ -294,6 +295,11 @@ const cardProgressText = computed(() => {
 const moveCard = (step: number) => {
   const length = filteredRecords.value.length
   if (!length) return
+
+  if (randomMode.value) {
+    randomCard()
+    return
+  }
 
   showAnswer.value = false
   cardIndex.value = (cardIndex.value + step + length) % length
@@ -518,24 +524,27 @@ watch([query, selectedLesson, selectedBook, source], () => {
         Không có dữ liệu phù hợp với bộ lọc hiện tại.
       </div>
 
-      <div class="mt-4 flex flex-wrap justify-center gap-2">
-        
-        <button class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600" @click="moveCard(-1)">
-          Trước
-        </button>
-        <button class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" @click="randomCard">
-          Ngẫu nhiên
-        </button>
-        <button class="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700" @click="moveCard(1)">
-          Sau
-        </button>
+      <div class="mx-auto mt-4 w-full max-w-3xl space-y-2">
+        <div class="grid grid-cols-2 gap-2">
+          <button class="w-full rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600" @click="moveCard(-1)">
+            Trước
+          </button>
+          <button class="w-full rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700" @click="moveCard(1)">
+            Sau
+          </button>
+        </div>
 
-        <button
-          class="rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          @click="showHiragana = !showHiragana"
-        >
-          {{ showHiragana ? 'Ẩn Hiragana' : 'Hiện Hiragana' }}
-        </button>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <label class="inline-flex cursor-pointer select-none items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+            <input v-model="randomMode" type="checkbox" class="h-4 w-4 rounded border-slate-400 text-emerald-600 focus:ring-emerald-500">
+            Ngẫu nhiên
+          </label>
+
+          <label class="inline-flex cursor-pointer select-none items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+            <input v-model="showHiragana" type="checkbox" class="h-4 w-4 rounded border-slate-400 text-teal-600 focus:ring-teal-500">
+            Hiện Hiragana
+          </label>
+        </div>
       </div>
     </section>
 

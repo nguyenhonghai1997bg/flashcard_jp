@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch, useFetch, useRequestURL, useRuntimeConfig } from '#imports'
+import { computed, ref, watch } from 'vue'
+import { useRequestURL, useRuntimeConfig } from '#app'
 
 type WordItem = {
   id: number
@@ -52,48 +53,55 @@ const requestUrl = useRequestURL()
 
 const publicJsonPath = (fileName: string) => {
   const normalizedBase = baseURL.endsWith('/') ? baseURL : `${baseURL}/`
-  const origin = process.client ? window.location.origin : requestUrl.origin
+  const origin = import.meta.client ? window.location.origin : requestUrl.origin
   return new URL(`${normalizedBase}db_mimikara/${fileName}`, origin).toString()
 }
 
-const { data: wordsData, pending: wordsPending, error: wordsError } = await useFetch<WordItem[]>(publicJsonPath('word.json'), {
-  default: () => []
-})
+const loadError = ref<Error | null>(null)
 
-const { data: grammarData, pending: grammarPending, error: grammarError } = await useFetch<GrammarItem[]>(publicJsonPath('grammar.json'), {
-  default: () => []
-})
+const [
+  wordsData,
+  grammarData,
+  listenData,
+  lessonsData,
+  listenLessonsData,
+  booksData
+] = await Promise.all([
+  $fetch<WordItem[]>(publicJsonPath('word.json')).catch((e) => {
+    loadError.value = e as Error
+    return []
+  }),
+  $fetch<GrammarItem[]>(publicJsonPath('grammar.json')).catch((e) => {
+    loadError.value = e as Error
+    return []
+  }),
+  $fetch<ListenItem[]>(publicJsonPath('listen.json')).catch((e) => {
+    loadError.value = e as Error
+    return []
+  }),
+  $fetch<LessonItem[]>(publicJsonPath('lesson.json')).catch((e) => {
+    loadError.value = e as Error
+    return []
+  }),
+  $fetch<LessonItem[]>(publicJsonPath('lesson_listen.json')).catch((e) => {
+    loadError.value = e as Error
+    return []
+  }),
+  $fetch<BookItem[]>(publicJsonPath('book.json')).catch((e) => {
+    loadError.value = e as Error
+    return []
+  })
+])
 
-const { data: listenData, pending: listenPending, error: listenError } = await useFetch<ListenItem[]>(publicJsonPath('listen.json'), {
-  default: () => []
-})
+const words = computed(() => wordsData ?? [])
+const grammar = computed(() => grammarData ?? [])
+const listen = computed(() => listenData ?? [])
+const lessons = computed(() => lessonsData ?? [])
+const listenLessons = computed(() => listenLessonsData ?? [])
+const books = computed(() => booksData ?? [])
 
-const { data: lessonsData } = await useFetch<LessonItem[]>(publicJsonPath('lesson.json'), {
-  default: () => []
-})
-
-const { data: listenLessonsData } = await useFetch<LessonItem[]>(publicJsonPath('lesson_listen.json'), {
-  default: () => []
-})
-
-const { data: booksData } = await useFetch<BookItem[]>(publicJsonPath('book.json'), {
-  default: () => []
-})
-
-const words = computed(() => wordsData.value ?? [])
-const grammar = computed(() => grammarData.value ?? [])
-const listen = computed(() => listenData.value ?? [])
-const lessons = computed(() => lessonsData.value ?? [])
-const listenLessons = computed(() => listenLessonsData.value ?? [])
-const books = computed(() => booksData.value ?? [])
-
-const pending = computed(() =>
-  wordsPending.value
-  || grammarPending.value
-  || listenPending.value
-)
-
-const error = computed(() => wordsError.value || grammarError.value || listenError.value)
+const pending = computed(() => false)
+const error = computed(() => loadError.value)
 
 const mode = ref<'flashcard' | 'list'>('flashcard')
 const source = ref<'word' | 'grammar' | 'listen'>('word')

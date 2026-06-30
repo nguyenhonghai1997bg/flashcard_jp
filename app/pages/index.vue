@@ -112,23 +112,6 @@ const cardIndex = ref(0)
 const showAnswer = ref(false)
 const showHiragana = ref(true)
 const showFilters = ref(false)
-const touchStartX = ref(0)
-const touchStartY = ref(0)
-const touchCurrentX = ref(0)
-const suppressNextTap = ref(false)
-const isSwiping = ref(false)
-const swipeOffsetX = ref(0)
-
-const cardTransformStyle = computed(() => {
-  const base = isSwiping.value
-    ? `translateX(${swipeOffsetX.value}px)`
-    : 'translateX(0)'
-  const transition = isSwiping.value ? 'none' : 'transform 180ms ease-out'
-  return {
-    transform: base,
-    transition
-  }
-})
 
 const normalizeText = (value: string) => value
   .normalize('NFD')
@@ -324,58 +307,7 @@ const randomCard = () => {
 }
 
 const onCardTap = () => {
-  if (suppressNextTap.value) {
-    suppressNextTap.value = false
-    return
-  }
   showAnswer.value = !showAnswer.value
-}
-
-const onCardTouchStart = (event: TouchEvent) => {
-  const touch = event.changedTouches[0]
-  if (!touch) return
-
-  isSwiping.value = true
-  touchStartX.value = touch.clientX
-  touchStartY.value = touch.clientY
-  touchCurrentX.value = touch.clientX
-  swipeOffsetX.value = 0
-}
-
-const onCardTouchMove = (event: TouchEvent) => {
-  if (!isSwiping.value) return
-
-  const touch = event.changedTouches[0]
-  if (!touch) return
-
-  touchCurrentX.value = touch.clientX
-  const deltaX = touchCurrentX.value - touchStartX.value
-  const deltaY = touch.clientY - touchStartY.value
-
-  // Prioritize vertical scroll when the gesture is mostly vertical.
-  if (Math.abs(deltaY) > Math.abs(deltaX)) {
-    swipeOffsetX.value = 0
-    return
-  }
-
-  // Dampen movement a bit so swipe feels controlled.
-  swipeOffsetX.value = deltaX * 0.85
-}
-
-const onCardTouchEnd = (event: TouchEvent) => {
-  const touch = event.changedTouches[0]
-  if (!touch) return
-
-  const deltaX = touch.clientX - touchStartX.value
-  const deltaY = touch.clientY - touchStartY.value
-  isSwiping.value = false
-  swipeOffsetX.value = 0
-
-  // Horizontal swipe should be dominant to avoid conflict with vertical scrolling.
-  if (Math.abs(deltaX) > 40 && Math.abs(deltaY) < 45) {
-    suppressNextTap.value = true
-    moveCard(deltaX > 0 ? -1 : 1)
-  }
 }
 
 const onKeydown = (event: KeyboardEvent) => {
@@ -557,18 +489,13 @@ watch([query, selectedLesson, selectedBook, source], () => {
 
         <div class="flex justify-center">
           <div
-            class="relative w-full max-w-3xl cursor-pointer rounded-2xl bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-500 px-6 py-8 text-center text-white transition hover:-translate-y-0.5 touch-pan-y"
-            :style="cardTransformStyle"
+              class="relative w-full max-w-3xl cursor-pointer rounded-2xl bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-500 px-6 py-8 text-center text-white transition hover:-translate-y-0.5"
             @click="onCardTap"
-            @touchstart="onCardTouchStart"
-            @touchmove="onCardTouchMove"
-            @touchend="onCardTouchEnd"
-            @touchcancel="onCardTouchEnd"
           >
             <p class="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
               {{ cardProgressText }}
             </p>
-            <p class="mt-1 text-xs text-cyan-100/90">{{ showAnswer ? 'Mặt sau' : 'Mặt trước' }} - bấm để lật, vuốt trái/phải để đổi thẻ</p>
+              <p class="mt-1 text-xs text-cyan-100/90">{{ showAnswer ? 'Mặt sau' : 'Mặt trước' }} - bấm để lật</p>
 
             <template v-if="!showAnswer">
               <p class="mt-6 text-3xl font-extrabold leading-tight md:text-5xl">{{ currentCard.title }}</p>
@@ -592,14 +519,22 @@ watch([query, selectedLesson, selectedBook, source], () => {
       </div>
 
       <div class="mt-4 flex flex-wrap justify-center gap-2">
+        
+        <button class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600" @click="moveCard(-1)">
+          Trước
+        </button>
+        <button class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" @click="randomCard">
+          Ngẫu nhiên
+        </button>
+        <button class="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700" @click="moveCard(1)">
+          Sau
+        </button>
+
         <button
           class="rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
           @click="showHiragana = !showHiragana"
         >
           {{ showHiragana ? 'Ẩn Hiragana' : 'Hiện Hiragana' }}
-        </button>
-        <button class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" @click="randomCard">
-          Ngẫu nhiên
         </button>
       </div>
     </section>

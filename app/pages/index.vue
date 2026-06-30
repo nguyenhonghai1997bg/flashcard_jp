@@ -386,16 +386,6 @@ watch([query, selectedLesson, selectedBook, source], () => {
 
     <section class="mx-auto mb-4 w-full max-w-6xl rounded-3xl border border-slate-200/70 bg-white/80 p-4 shadow-xl shadow-slate-200/50 backdrop-blur">
       <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-        <div>
-          <label for="search" class="mb-2 block text-sm font-bold text-slate-700">Tìm kiếm Nhật / Việt</label>
-          <input
-            id="search"
-            v-model="query"
-            type="text"
-            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-            placeholder="Ví dụ: じょせい, phụ nữ, tuổi cao..."
-          >
-        </div>
         <button
           class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           @click="showFilters = !showFilters"
@@ -417,6 +407,17 @@ watch([query, selectedLesson, selectedBook, source], () => {
           <option value="listen">Luyện nghe</option>
         </select>
       </div> -->
+
+      <div>
+        <label for="search" class="mb-2 block text-sm font-bold text-slate-700">Tìm kiếm Nhật / Việt</label>
+        <input
+          id="search"
+          v-model="query"
+          type="text"
+          class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+          placeholder="Ví dụ: じょせい, phụ nữ, tuổi cao..."
+        >
+      </div>
 
       <div>
         <label for="book" class="mb-2 block text-sm font-bold text-slate-700">Lọc theo book</label>

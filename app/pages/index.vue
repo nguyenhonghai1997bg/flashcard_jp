@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref, watch, useFetch, useRequestURL, useRuntimeConfig } from '#imports'
+
 type WordItem = {
   id: number
   lesson_id: number
@@ -46,10 +48,12 @@ type StudyRecord = {
 }
 
 const { app: { baseURL } } = useRuntimeConfig()
+const requestUrl = useRequestURL()
 
 const publicJsonPath = (fileName: string) => {
   const normalizedBase = baseURL.endsWith('/') ? baseURL : `${baseURL}/`
-  return `${normalizedBase}db_mimikara/${fileName}`
+  const origin = process.client ? window.location.origin : requestUrl.origin
+  return new URL(`${normalizedBase}db_mimikara/${fileName}`, origin).toString()
 }
 
 const { data: wordsData, pending: wordsPending, error: wordsError } = await useFetch<WordItem[]>(publicJsonPath('word.json'), {

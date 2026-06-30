@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRequestURL, useRuntimeConfig } from '#app'
 
 type WordItem = {
@@ -106,12 +106,15 @@ const error = computed(() => loadError.value)
 const mode = ref<'flashcard' | 'list'>('flashcard')
 const source = ref<'word' | 'grammar' | 'listen'>('word')
 const query = ref('')
-const selectedBook = ref<number | 'all'>('all')
+const selectedBook = ref<number | 'all'>(2)
 const selectedLesson = ref<number | 'all'>('all')
 const cardIndex = ref(0)
 const showAnswer = ref(false)
 const showHiragana = ref(true)
 const showFilters = ref(false)
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const suppressNextTap = ref(false)
 
 const normalizeText = (value: string) => value
   .normalize('NFD')
@@ -146,6 +149,14 @@ const listenLessonMap = computed(() => {
   const map = new Map<number, string>()
   for (const lesson of listenLessons.value) {
     map.set(lesson.id, lesson.title)
+  }
+  return map
+})
+
+const bookMap = computed(() => {
+  const map = new Map<number, string>()
+  for (const book of books.value) {
+    map.set(book.id, book.title)
   }
   return map
 })
@@ -268,6 +279,21 @@ const currentLessonTitle = computed(() => {
   return getLessonTitle(currentCard.value.lessonId)
 })
 
+const currentBookTitle = computed(() => {
+  if (!currentCard.value) return ''
+
+  const lesson = lessonOptions.value.find((item) => item.id === currentCard.value?.lessonId)
+  if (!lesson?.book_id) return ''
+
+  return bookMap.value.get(lesson.book_id) ?? `Book ${lesson.book_id}`
+})
+
+const cardProgressText = computed(() => {
+  const total = filteredRecords.value.length
+  if (!total) return '0/0'
+  return `${cardIndex.value + 1}/${total}`
+})
+
 const moveCard = (step: number) => {
   const length = filteredRecords.value.length
   if (!length) return
@@ -282,6 +308,70 @@ const randomCard = () => {
   showAnswer.value = false
   cardIndex.value = Math.floor(Math.random() * length)
 }
+
+const onCardTap = () => {
+  if (suppressNextTap.value) {
+    suppressNextTap.value = false
+    return
+  }
+  showAnswer.value = !showAnswer.value
+}
+
+const onCardTouchStart = (event: TouchEvent) => {
+  const touch = event.changedTouches[0]
+  if (!touch) return
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+}
+
+const onCardTouchEnd = (event: TouchEvent) => {
+  const touch = event.changedTouches[0]
+  if (!touch) return
+  const deltaX = touch.clientX - touchStartX.value
+  const deltaY = touch.clientY - touchStartY.value
+
+  // Horizontal swipe should be dominant to avoid conflict with vertical scrolling.
+  if (Math.abs(deltaX) > 45 && Math.abs(deltaY) < 35) {
+    suppressNextTap.value = true
+    moveCard(deltaX > 0 ? -1 : 1)
+  }
+}
+
+const onKeydown = (event: KeyboardEvent) => {
+  if (mode.value !== 'flashcard' || !currentCard.value) return
+
+  const target = event.target as HTMLElement | null
+  if (target) {
+    const tag = target.tagName.toLowerCase()
+    const isEditable = target.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select'
+    if (isEditable) return
+  }
+
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    moveCard(-1)
+    return
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    moveCard(1)
+    return
+  }
+
+  if (event.key === ' ' || event.code === 'Space') {
+    event.preventDefault()
+    showAnswer.value = !showAnswer.value
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
 
 const activeBookCount = computed(() => {
   const ids = new Set(lessonOptions.value.map((item) => Math.floor(item.id / 1000)))
@@ -418,27 +508,38 @@ watch([query, selectedLesson, selectedBook, source], () => {
       v-if="!pending && !error && mode === 'flashcard'"
       class="mx-auto w-full max-w-6xl rounded-3xl border border-slate-200/70 bg-white/85 p-4 shadow-xl shadow-slate-200/40"
     >
-      <div v-if="currentCard" class="flex justify-center">
-        <div
-          class="w-full max-w-3xl cursor-pointer rounded-2xl bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-500 px-6 py-8 text-center text-white transition hover:-translate-y-0.5"
-          @click="showAnswer = !showAnswer"
-        >
-          <p class="text-sm font-semibold text-cyan-100">{{ currentLessonTitle }}</p>
-          <p class="mt-1 text-xs text-cyan-100/90">{{ showAnswer ? 'Mặt sau' : 'Mặt trước' }} - bấm vào thẻ để lật</p>
+      <div v-if="currentCard" class="space-y-3">
+        <div class="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-2 text-xs font-medium text-slate-700">
+          <span v-if="currentBookTitle" class="rounded-full border border-slate-300 bg-white px-2.5 py-0.5">{{ currentBookTitle }}</span>
+          <span class="rounded-full border border-slate-300 bg-white px-2.5 py-0.5">{{ currentLessonTitle }}</span>
+        </div>
 
-          <template v-if="!showAnswer">
-            <p class="mt-6 text-3xl font-extrabold leading-tight md:text-5xl">{{ currentCard.title }}</p>
-            <p v-if="showHiragana" class="mt-3 text-base text-cyan-50">{{ currentCard.subtitle }}</p>
-          </template>
+        <div class="flex justify-center">
+          <div
+            class="relative w-full max-w-3xl cursor-pointer rounded-2xl bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-500 px-6 py-8 text-center text-white transition hover:-translate-y-0.5"
+            @click="onCardTap"
+            @touchstart="onCardTouchStart"
+            @touchend="onCardTouchEnd"
+          >
+            <p class="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white">
+              {{ cardProgressText }}
+            </p>
+            <p class="mt-1 text-xs text-cyan-100/90">{{ showAnswer ? 'Mặt sau' : 'Mặt trước' }} - bấm để lật, vuốt trái/phải để đổi thẻ</p>
 
-          <template v-else>
-            <p class="mt-6 text-lg font-bold text-amber-100 md:text-2xl">{{ currentCard.meaning }}</p>
-            <div
-              v-if="currentCard.detailHtml"
-              class="prose prose-invert prose-sm mt-4 max-w-none rounded-xl bg-white/10 p-3 text-left"
-              v-html="formatDetailHtml(currentCard.detailHtml)"
-            />
-          </template>
+            <template v-if="!showAnswer">
+              <p class="mt-6 text-3xl font-extrabold leading-tight md:text-5xl">{{ currentCard.title }}</p>
+              <p v-if="showHiragana" class="mt-3 text-base text-cyan-50">{{ currentCard.subtitle }}</p>
+            </template>
+
+            <template v-else>
+              <p class="mt-6 text-lg font-bold text-amber-100 md:text-2xl">{{ currentCard.meaning }}</p>
+              <div
+                v-if="currentCard.detailHtml"
+                class="prose prose-invert prose-sm mt-4 max-w-none rounded-xl bg-white/10 p-3 text-left"
+                v-html="formatDetailHtml(currentCard.detailHtml)"
+              />
+            </template>
+          </div>
         </div>
       </div>
 
@@ -453,14 +554,8 @@ watch([query, selectedLesson, selectedBook, source], () => {
         >
           {{ showHiragana ? 'Ẩn Hiragana' : 'Hiện Hiragana' }}
         </button>
-        <button class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600" @click="moveCard(-1)">
-          Trước
-        </button>
         <button class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600" @click="randomCard">
           Ngẫu nhiên
-        </button>
-        <button class="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cyan-700" @click="moveCard(1)">
-          Sau
         </button>
       </div>
     </section>

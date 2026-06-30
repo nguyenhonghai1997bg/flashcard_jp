@@ -45,27 +45,34 @@ type StudyRecord = {
   source: 'word' | 'grammar' | 'listen'
 }
 
-const { data: wordsData, pending: wordsPending, error: wordsError } = await useFetch<WordItem[]>('/db_mimikara/word.json', {
+const { app: { baseURL } } = useRuntimeConfig()
+
+const publicJsonPath = (fileName: string) => {
+  const normalizedBase = baseURL.endsWith('/') ? baseURL : `${baseURL}/`
+  return `${normalizedBase}db_mimikara/${fileName}`
+}
+
+const { data: wordsData, pending: wordsPending, error: wordsError } = await useFetch<WordItem[]>(publicJsonPath('word.json'), {
   default: () => []
 })
 
-const { data: grammarData, pending: grammarPending, error: grammarError } = await useFetch<GrammarItem[]>('/db_mimikara/grammar.json', {
+const { data: grammarData, pending: grammarPending, error: grammarError } = await useFetch<GrammarItem[]>(publicJsonPath('grammar.json'), {
   default: () => []
 })
 
-const { data: listenData, pending: listenPending, error: listenError } = await useFetch<ListenItem[]>('/db_mimikara/listen.json', {
+const { data: listenData, pending: listenPending, error: listenError } = await useFetch<ListenItem[]>(publicJsonPath('listen.json'), {
   default: () => []
 })
 
-const { data: lessonsData } = await useFetch<LessonItem[]>('/db_mimikara/lesson.json', {
+const { data: lessonsData } = await useFetch<LessonItem[]>(publicJsonPath('lesson.json'), {
   default: () => []
 })
 
-const { data: listenLessonsData } = await useFetch<LessonItem[]>('/db_mimikara/lesson_listen.json', {
+const { data: listenLessonsData } = await useFetch<LessonItem[]>(publicJsonPath('lesson_listen.json'), {
   default: () => []
 })
 
-const { data: booksData } = await useFetch<BookItem[]>('/db_mimikara/book.json', {
+const { data: booksData } = await useFetch<BookItem[]>(publicJsonPath('book.json'), {
   default: () => []
 })
 

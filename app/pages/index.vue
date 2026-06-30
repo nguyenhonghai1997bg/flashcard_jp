@@ -110,6 +110,8 @@ const selectedBook = ref<number | 'all'>('all')
 const selectedLesson = ref<number | 'all'>('all')
 const cardIndex = ref(0)
 const showAnswer = ref(false)
+const showHiragana = ref(true)
+const showFilters = ref(false)
 
 const normalizeText = (value: string) => value
   .normalize('NFD')
@@ -313,19 +315,28 @@ watch([query, selectedLesson, selectedBook, source], () => {
       </p> -->
     </section>
 
-    <section class="mx-auto mb-4 grid w-full max-w-6xl gap-4 rounded-3xl border border-slate-200/70 bg-white/80 p-4 shadow-xl shadow-slate-200/50 backdrop-blur md:grid-cols-4">
-      <div class="md:col-span-3">
-        <label for="search" class="mb-2 block text-sm font-bold text-slate-700">Tìm kiếm Nhật / Việt</label>
-        <input
-          id="search"
-          v-model="query"
-          type="text"
-          class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-          placeholder="Ví dụ: じょせい, phụ nữ, tuổi cao..."
+    <section class="mx-auto mb-4 w-full max-w-6xl rounded-3xl border border-slate-200/70 bg-white/80 p-4 shadow-xl shadow-slate-200/50 backdrop-blur">
+      <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+        <div>
+          <label for="search" class="mb-2 block text-sm font-bold text-slate-700">Tìm kiếm Nhật / Việt</label>
+          <input
+            id="search"
+            v-model="query"
+            type="text"
+            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+            placeholder="Ví dụ: じょせい, phụ nữ, tuổi cao..."
+          >
+        </div>
+        <button
+          class="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          @click="showFilters = !showFilters"
         >
+          {{ showFilters ? 'Thu gọn bộ lọc' : 'Mở rộng bộ lọc' }}
+        </button>
       </div>
 
-      <div>
+      <div v-show="showFilters" class="mt-4 grid gap-4 md:grid-cols-3">
+      <!-- <div>
         <label for="source" class="mb-2 block text-sm font-bold text-slate-700">Loại dữ liệu</label>
         <select
           id="source"
@@ -333,10 +344,10 @@ watch([query, selectedLesson, selectedBook, source], () => {
           class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
         >
           <option value="word">Từ vựng</option>
-          <!-- <option value="grammar">Ngữ pháp</option>
-          <option value="listen">Luyện nghe</option> -->
+          <option value="grammar">Ngữ pháp</option>
+          <option value="listen">Luyện nghe</option>
         </select>
-      </div>
+      </div> -->
 
       <div>
         <label for="book" class="mb-2 block text-sm font-bold text-slate-700">Lọc theo book</label>
@@ -390,6 +401,7 @@ watch([query, selectedLesson, selectedBook, source], () => {
           Danh sách
         </button>
       </div>
+      </div>
     </section>
 
     <section class="mx-auto mb-4 w-full max-w-6xl rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm text-slate-700">
@@ -406,34 +418,41 @@ watch([query, selectedLesson, selectedBook, source], () => {
       v-if="!pending && !error && mode === 'flashcard'"
       class="mx-auto w-full max-w-6xl rounded-3xl border border-slate-200/70 bg-white/85 p-4 shadow-xl shadow-slate-200/40"
     >
-      <div
-        v-if="currentCard"
-        class="cursor-pointer rounded-2xl bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-500 px-6 py-8 text-white transition hover:-translate-y-0.5"
-        @click="showAnswer = !showAnswer"
-      >
-        <p class="text-sm font-semibold text-cyan-100">{{ currentLessonTitle }}</p>
-        <p class="mt-1 text-xs text-cyan-100/90">{{ showAnswer ? 'Mặt sau' : 'Mặt trước' }} - bấm vào thẻ để lật</p>
+      <div v-if="currentCard" class="flex justify-center">
+        <div
+          class="w-full max-w-3xl cursor-pointer rounded-2xl bg-gradient-to-br from-teal-700 via-cyan-600 to-teal-500 px-6 py-8 text-center text-white transition hover:-translate-y-0.5"
+          @click="showAnswer = !showAnswer"
+        >
+          <p class="text-sm font-semibold text-cyan-100">{{ currentLessonTitle }}</p>
+          <p class="mt-1 text-xs text-cyan-100/90">{{ showAnswer ? 'Mặt sau' : 'Mặt trước' }} - bấm vào thẻ để lật</p>
 
-        <template v-if="!showAnswer">
-          <p class="mt-6 text-3xl font-extrabold leading-tight md:text-5xl">{{ currentCard.title }}</p>
-          <p class="mt-3 text-base text-cyan-50">{{ currentCard.subtitle }}</p>
-        </template>
+          <template v-if="!showAnswer">
+            <p class="mt-6 text-3xl font-extrabold leading-tight md:text-5xl">{{ currentCard.title }}</p>
+            <p v-if="showHiragana" class="mt-3 text-base text-cyan-50">{{ currentCard.subtitle }}</p>
+          </template>
 
-        <template v-else>
-          <p class="mt-6 text-lg font-bold text-amber-100 md:text-2xl">{{ currentCard.meaning }}</p>
-          <div
-            v-if="currentCard.detailHtml"
-            class="prose prose-invert prose-sm mt-4 max-w-none rounded-xl bg-white/10 p-3"
-            v-html="formatDetailHtml(currentCard.detailHtml)"
-          />
-        </template>
+          <template v-else>
+            <p class="mt-6 text-lg font-bold text-amber-100 md:text-2xl">{{ currentCard.meaning }}</p>
+            <div
+              v-if="currentCard.detailHtml"
+              class="prose prose-invert prose-sm mt-4 max-w-none rounded-xl bg-white/10 p-3 text-left"
+              v-html="formatDetailHtml(currentCard.detailHtml)"
+            />
+          </template>
+        </div>
       </div>
 
       <div v-else class="rounded-2xl border border-dashed border-slate-300 px-4 py-10 text-center text-slate-500">
         Không có dữ liệu phù hợp với bộ lọc hiện tại.
       </div>
 
-      <div class="mt-4 flex flex-wrap gap-2">
+      <div class="mt-4 flex flex-wrap justify-center gap-2">
+        <button
+          class="rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          @click="showHiragana = !showHiragana"
+        >
+          {{ showHiragana ? 'Ẩn Hiragana' : 'Hiện Hiragana' }}
+        </button>
         <button class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600" @click="moveCard(-1)">
           Trước
         </button>

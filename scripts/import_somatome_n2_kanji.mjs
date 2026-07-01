@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import he from 'he'
 
 const BASE_URL = 'https://www.vnjpclub.com/somatome-n2-han-tu'
 const MARKER = '[SOMATOME_N2_KANJI]'
@@ -31,15 +32,7 @@ const stripTags = (value) => {
   )
 }
 
-const decodeHtmlEntities = (value) => value
-  .replace(/&nbsp;/gi, ' ')
-  .replace(/&amp;/gi, '&')
-  .replace(/&quot;/gi, '"')
-  .replace(/&#39;/gi, "'")
-  .replace(/&#x2F;/gi, '/')
-  .replace(/&#47;/gi, '/')
-  .replace(/&lt;/gi, '<')
-  .replace(/&gt;/gi, '>')
+const decodeHtmlEntities = (value) => he.decode(value)
 
 const removeVietnameseDiacritics = (value) => value
   .normalize('NFD')

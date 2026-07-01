@@ -8,6 +8,7 @@ type WordItem = {
   kanji?: string
   hira?: string
   mean?: string
+  cn_mean?: string
   mean_unsigned?: string
   text?: string
   example?: string
@@ -43,6 +44,7 @@ type StudyRecord = {
   lessonId: number
   title: string
   subtitle: string
+  hanviet?: string
   meaning: string
   detailHtml: string
   source: 'word' | 'grammar' | 'listen'
@@ -169,6 +171,7 @@ const records = computed<StudyRecord[]>(() => {
         lessonId: item.lesson_id,
         title: item.kanji || stripHtml(item.text) || '---',
         subtitle: item.hira ?? '',
+        hanviet: item.cn_mean ?? '',
         meaning: item.mean ?? '',
         detailHtml: [jpExample?.trim(), vnExample?.trim()].filter(Boolean).join('<br/>'),
         source: 'word'
@@ -556,6 +559,9 @@ watch([query, orderRange, selectedLesson, selectedBook, source], () => {
             </template>
 
             <template v-else>
+              <h1 v-if="currentCard.hanviet" class="mt-2 text-lg font-semibold uppercase tracking-wide text-cyan-100">
+                {{ currentCard.hanviet }}
+              </h1>
               <p class="mt-6 text-lg font-bold text-amber-100 md:text-2xl">{{ currentCard.meaning }}</p>
               <div
                 v-if="currentCard.detailHtml"

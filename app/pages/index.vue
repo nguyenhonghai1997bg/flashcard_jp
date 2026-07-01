@@ -106,6 +106,7 @@ const error = computed(() => loadError.value)
 const mode = ref<'flashcard' | 'list'>('flashcard')
 const source = ref<'word' | 'grammar' | 'listen'>('word')
 const query = ref('')
+const orderRange = ref('')
 const selectedBook = ref<number | 'all'>(2)
 const selectedLesson = ref<number | 'all'>('all')
 const cardIndex = ref(0)
@@ -234,7 +235,25 @@ const getLessonTitle = (lessonId: number) => {
   return lessonMap.value.get(lessonId) ?? `Lesson ${lessonId}`
 }
 
-const filteredRecords = computed(() => {
+const parsedOrderRange = computed(() => {
+  const raw = orderRange.value.trim()
+  if (!raw) return null
+
+  const matched = raw.match(/^(\d+)\s*-\s*(\d+)$/)
+  if (!matched) {
+    return { isValid: false as const, start: 0, end: 0 }
+  }
+
+  const start = Number(matched[1])
+  const end = Number(matched[2])
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
+    return { isValid: false as const, start: 0, end: 0 }
+  }
+
+  return { isValid: true as const, start, end }
+})
+
+const baseFilteredRecords = computed(() => {
   const list = records.value
   const q = normalizeText(query.value)
 
@@ -258,6 +277,19 @@ const filteredRecords = computed(() => {
 
     return searchable.includes(q)
   })
+})
+
+const filteredRecords = computed(() => {
+  const list = baseFilteredRecords.value
+  const range = parsedOrderRange.value
+
+  if (!range || !range.isValid) {
+    return list
+  }
+
+  const startIndex = Math.max(range.start - 1, 0)
+  const endIndex = Math.min(range.end, list.length)
+  return list.slice(startIndex, endIndex)
 })
 
 const currentCard = computed(() => {
@@ -357,7 +389,7 @@ const activeBookCount = computed(() => {
   return ids.size || books.value.length
 })
 
-watch([query, selectedLesson, selectedBook, source], () => {
+watch([query, orderRange, selectedLesson, selectedBook, source], () => {
   cardIndex.value = 0
   showAnswer.value = false
 
@@ -453,6 +485,20 @@ watch([query, selectedLesson, selectedBook, source], () => {
             {{ lesson.title }}
           </option>
         </select>
+      </div>
+
+      <div>
+        <label for="order-range" class="mb-2 block text-sm font-bold text-slate-700">Lọc theo thứ tự (ví dụ: 5-10)</label>
+        <input
+          id="order-range"
+          v-model="orderRange"
+          type="text"
+          class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+          placeholder="5-10"
+        >
+        <p v-if="parsedOrderRange && !parsedOrderRange.isValid" class="mt-2 text-xs font-medium text-rose-600">
+          Sai định dạng. Nhập theo dạng số-số, ví dụ: 5-10
+        </p>
       </div>
 
       <div class="flex items-end gap-2">
